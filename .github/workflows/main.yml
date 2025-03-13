@@ -28,25 +28,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install openai autopep8 flake8 pylint
-      - name: Get changed Python files
-        id: changed_files
-        run: |
-          CHANGED_FILES=$(git diff --name-only --diff-filter=AM HEAD^ HEAD -- '*.py' || echo "")
-          echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
-          echo "Changed files: $CHANGED_FILES"
-      - name: Run code correction on changed files
-        if: env.CHANGED_FILES != ''
-        run: |
-          for file in $CHANGED_FILES; do
-            echo "Processing: $file"
-            autopep8 --in-place --aggressive --aggressive "$file"
-          done
+
+      - name: List files in workspace
+        run: ls -R
+      
       - name: Run comparison script
         run: |
           cd utils  # Move into utils directory
           python check_cfg_params.py ../cfgfiles/file1.cfg ../cfgfiles/file2.cfg ../cfgfiles/expected.cfg
+
       - name: Commit and push changes
         run: |
           git config --global user.email "akankshalede@gmail.com"
           git config --global user.name "AkankshaLede"
           git diff --quiet || (git add . && git commit -m "Auto-corrected Python files" && sleep 10 && git push)
+          
