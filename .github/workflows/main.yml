@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: Code Correction
 
 on:
   push:
@@ -6,22 +6,50 @@ on:
       - main
 
 jobs:
-  build:
+  format_code:
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+        
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/checkout@v4
         with:
-          python-version: '3.9'  # Use the correct Python version
+          fetch-depth: 2  # Ensure commit history
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt || true
+          python -m pip install --upgrade pip
+          pip install openai autopep8 flake8 pylint
+
+      - name: Get changed Python files
+        id: changed_files
+        run: |
+          CHANGED_FILES=$(git diff --name-only --diff-filter=AM HEAD^ HEAD -- '*.py' || echo "")
+          echo "CHANGED_FILES=$CHANGED_FILES" >> $GITHUB_ENV
+          echo "Changed files: $CHANGED_FILES"
+
+      - name: Run code correction on changed files
+        if: env.CHANGED_FILES != ''
+        run: |
+          for file in $CHANGED_FILES; do
+            echo "Processing: $file"
+            autopep8 --in-place --aggressive --aggressive "$file"
+          done
 
       - name: Run comparison script
         run: |
           python utils/check_cfg_params.py cfgfiles/file1.cfg cfgfiles/file2.cfg cfgfiles/expected.cfg
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.email "akankshalede@gmail.com"
+          git config --global user.name "AkankshaLede"
+          git diff --quiet || (git add . && git commit -m "Auto-corrected Python files" && sleep 10 && git push)
