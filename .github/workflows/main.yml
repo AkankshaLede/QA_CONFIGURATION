@@ -43,6 +43,9 @@ jobs:
             echo "Processing: $file"
             autopep8 --in-place --aggressive --aggressive "$file"
           done
+          
+      - name: List files in workspace
+        run: ls -R
 
       - name: Run comparison script
         run: |

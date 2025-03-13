@@ -3,17 +3,14 @@ import argparse
 import os
 
 def read_cfg_to_dict(file_path):
-    """Reads a .cfg file and converts it to a dictionary."""
     config = configparser.ConfigParser()
     config.read(file_path)
     return {section: dict(config.items(section)) for section in config.sections()}
 
 def validate_config(actual_cfg, expected_cfg, file1_cfg_path):
-    """Compares actual (A.cfg) and expected (B.cfg) configurations and prints mismatches."""
     mismatches = []
-    flag = 0  # Default flag is 0 (graceful execution)
+    flag = 0
 
-    # Check for ANY field marked as 'SHOULD_NOT_BE_PRESENT' in expected config
     for section, expected_params in expected_cfg.items():
         for key, expected_value in expected_params.items():
             if expected_value == "SHOULD_NOT_BE_PRESENT":
@@ -21,46 +18,50 @@ def validate_config(actual_cfg, expected_cfg, file1_cfg_path):
                     mismatches.append(f"Error: '{key}' should not be present in section [{section}] in {file1_cfg_path}")
                     flag = 1
 
-    # Standard comparison for other parameters
     for section, expected_params in expected_cfg.items():
         if section in actual_cfg:
             for key, expected_value in expected_params.items():
                 if expected_value == "SHOULD_NOT_BE_PRESENT":
-                    continue  # Skip as this is handled above
+                    continue
 
                 actual_value = actual_cfg[section].get(key)
                 if actual_value is None:
                     mismatches.append(f"{key} is missing in section [{section}] {file1_cfg_path}")
-                    flag = 1  # Set flag on missing key
+                    flag = 1
                 elif actual_value != expected_value:
                     mismatches.append(f"{key} in section [{section}] is {actual_value}, expected {expected_value}")
-                    flag = 1  # Set flag on value mismatch
+                    flag = 1
         else:
-            # skip if the entire section has ONLY `SHOULD_NOT_BE_PRESENT` fields
             if all(value == "SHOULD_NOT_BE_PRESENT" for value in expected_params.values()):
                 continue
             mismatches.append(f"Section [{section}] is missing in {file1_cfg_path}")
-            flag = 1  # Set flag on missing section
+            flag = 1
     
     return mismatches, flag
 
-# Use argparse to take file paths as arguments
-os.chdir('..')
-os.chdir('cfgfiles')
+# Set path to parent directory of the script, where `cfgfiles` is located
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+cfg_path = os.path.join(script_dir, 'cfgfiles')
+
+# Check if directory exists
+if not os.path.exists(cfg_path):
+    raise FileNotFoundError(f"Config directory '{cfg_path}' not found")
+
+# Update file paths to use absolute paths
 parser = argparse.ArgumentParser(description="Compare multiple .cfg files with a single expected .cfg file")
 parser.add_argument('actual_files', nargs='+', type=str, help="Path to the actual .cfg files")
 parser.add_argument('expected_file', type=str, help="Path to the expected .cfg file")
 
-# Parse the arguments
 args = parser.parse_args()
 
-# Read expected config
-expected_config = read_cfg_to_dict(args.expected_file)
+# Use absolute paths to locate files
+actual_files = [os.path.join(cfg_path, file) for file in args.actual_files]
+expected_file = os.path.join(cfg_path, args.expected_file)
 
-# Compare each actual config file against the expected config
+expected_config = read_cfg_to_dict(expected_file)
+
 overall_flag = 0
-for file in args.actual_files:
-    print(f"\nComparing '{file}' with '{args.expected_file}'")
+for file in actual_files:
     actual_config = read_cfg_to_dict(file)
     mismatch_list, flag = validate_config(actual_config, expected_config, file)
 
@@ -69,8 +70,6 @@ for file in args.actual_files:
     else:
         print(f"All parameters in '{file}' match the expected configuration.")
 
-    overall_flag = max(overall_flag, flag)  # Set overall flag if any comparison fails
+    overall_flag = max(overall_flag, flag)
 
-# Final execution flag summary
 print("\nOverall Execution flag:", overall_flag)
-
