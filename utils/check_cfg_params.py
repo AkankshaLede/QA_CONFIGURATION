@@ -74,4 +74,3 @@ for file in args.actual_files:
 # Final execution flag summary
 print("\nOverall Execution flag:", overall_flag)
 
-print("Triggering GitHub Action...")
