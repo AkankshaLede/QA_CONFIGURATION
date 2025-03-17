@@ -37,7 +37,7 @@ jobs:
       - name: Find Config Files
         id: find-configs
         run: |
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep '^cfgfiles/.*\.cfg$' || true)
+          CHANGED_FILES=$(git diff --name-only FETCH_HEAD...HEAD | grep '^cfgfiles/.*\.cfg$' || true)
 
           DEFAULT_FILE=$(echo "$CHANGED_FILES" | grep 'default\.cfg' || true)
           INPUT_FILES=$(echo "$CHANGED_FILES" | grep -v 'default\.cfg' || true)
@@ -47,9 +47,11 @@ jobs:
           echo "Input Files: $INPUT_FILES"
 
           echo "default_file=$DEFAULT_FILE" >> $GITHUB_ENV
-          echo "input_files=$INPUT_FILES" >> $GITHUB_ENV
+          echo "input_files<<EOF" >> $GITHUB_ENV
+          echo "$INPUT_FILES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Use Found Config Files
         run: |
-          echo "Using Default File: $default_file"
-          echo "Using Input Files: $input_files"
+          echo "Using Default File: ${{ env.default_file }}"
+          echo "Using Input Files: ${{ env.input_files }}"
