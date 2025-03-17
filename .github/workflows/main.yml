@@ -1,54 +1,67 @@
-name: Validate Configuration Files
+name: PR Check with Dynamic Arguments
 
 on:
   pull_request:
-    branches:
-      - AUTOMATION
     paths:
-      - 'cfgfiles/**'  
+      - 'cfgfiles/**'
+    branches:
+      - automation
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
-  validate:
+  run-python-script:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0  # Fetch the entire Git history
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
+      # 🔥 Debug Step to See Which Files Are Changed
+      - name: Debug Changed Files
+        run: git diff --name-only HEAD^1 HEAD
 
-    - name: Install dependencies (if any)
-      run: |
-        python -m pip install --upgrade pip
-    - name: Debug commit hashes
-      run: |
-        echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
-        echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-    - name: Get changed config files
-      id: changed-files
-      run: |
-        changed_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} -- cfgfiles/)
-        if [[ -n "$changed_files" ]]; then
-          echo "changed_files=$(echo "$changed_files" | tr '\n' ',' | sed 's/,$//')" >> $GITHUB_OUTPUT
-        else
-          echo "changed_files=" >> $GITHUB_OUTPUT
-        fi
+      - name: List files in workspace
+        run: ls -R
 
-    - name: Debug git diff output
-      run: |
-        git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} -- cfgfiles/
+      - name: Install Dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "No requirements.txt found, skipping dependency installation."
+          fi
 
-    - name: Run validation script
-      if: ${{ steps.changed-files.outputs.changed_files != '' }}
-      run: |
-        python utils/check_cfg_params.py --input_files "${{ steps.changed-files.outputs.changed_files }}" --default_file "test_data/expected.cfg"
+      - name: Find Config Files
+        id: find-configs
+        run: |
+          CHANGED_FILES=$(git diff --name-only HEAD^1 HEAD | grep '^cfgfiles/.*\.cfg$' || true)
 
-    - name: Check for script errors
-      if: ${{ failure() }}
-      run: echo "Validation failed."
+          DEFAULT_FILE=$(echo "$CHANGED_FILES" | grep 'default\.cfg' || true)
+          INPUT_FILES=$(echo "$CHANGED_FILES" | grep -v 'default\.cfg' || true)
+
+          echo "Changed Files: $CHANGED_FILES"
+          echo "Default File: $DEFAULT_FILE"
+          echo "Input Files: $INPUT_FILES"
+
+          echo "default_file=$DEFAULT_FILE" >> $GITHUB_ENV
+          echo "input_files<<EOF" >> $GITHUB_ENV
+          echo "$INPUT_FILES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Run comparison script
+        id: run_script
+        run: |
+          set -x   # Enable debug mode to print each command before running
+          python utils/check_cfg_params.py --input_files "${{ env.input_files }}" --default_file "${{ env.default_file }}"
+          set +x   # Disable debug mode
