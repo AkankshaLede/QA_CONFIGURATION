@@ -22,6 +22,9 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Debug Changed Files
+        run: git diff --name-only HEAD^1 HEAD
+
       - name: Debug Info
         run: |
           echo "Current Branch: $(git branch --show-current)"
