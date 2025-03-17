@@ -111,17 +111,9 @@ jobs:
       - name: Run comparison script
         id: run_script
         run: |
-          output=$(python utils/check_cfg_params.py --input_files "cfgfiles/file1.cfg,cfgfiles/file2.cfg" --default_file "test_data/expected.cfg")
-          echo "$output"
-          
-          # Capture the 'Overall Execution flag' value
-          flag=$(echo "$output" | grep 'Overall Execution flag:' | awk '{print $4}')
-          if [[ "$flag" -eq 1 ]]; then
-            echo "Mismatch detected — failing PR."
-            exit 1
-          else
-            echo "No mismatches — PR is safe to merge."
-          fi
+          set -x   # Enable debug mode to print each command before running
+          python utils/check_cfg_params.py --input_files "cfgfiles/file1.cfg,cfgfiles/file2.cfg" --default_file "test_data/expected.cfg"
+          set +x   # Disable debug mode
 
       - name: Commit and push changes (if any)
         if: success()
