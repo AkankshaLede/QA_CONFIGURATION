@@ -1,6 +1,7 @@
 name: PR Check with Dynamic Arguments
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'cfgfiles/**'
