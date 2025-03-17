@@ -60,7 +60,7 @@ on:
     paths:
       - 'config/**'  # Make sure this matches your folder structure
     branches:
-      - main
+      - AUTOMATION
     types: [opened, synchronize, reopened]
 
 permissions:
