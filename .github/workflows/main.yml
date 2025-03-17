@@ -1,13 +1,16 @@
 name: PR Check with Dynamic Arguments
 
 on:
-  workflow_dispatch:
   pull_request:
     paths:
       - 'cfgfiles/**'
     branches:
       - AUTOMATION
     types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   run-python-script:
