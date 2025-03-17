@@ -80,10 +80,10 @@ jobs:
           fetch-depth: 2
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
@@ -92,6 +92,21 @@ jobs:
 
       - name: List files in workspace
         run: ls -R
+
+      - name: Ensure files exist
+        run: |
+          if [[ ! -f "cfgfiles/file1.cfg" ]]; then
+            echo "Error: file1.cfg not found!"
+            exit 1
+          fi
+          if [[ ! -f "cfgfiles/file2.cfg" ]]; then
+            echo "Error: file2.cfg not found!"
+            exit 1
+          fi
+          if [[ ! -f "test_data/expected.cfg" ]]; then
+            echo "Error: expected.cfg not found!"
+            exit 1
+          fi
 
       - name: Run comparison script
         id: run_script
@@ -113,6 +128,4 @@ jobs:
         run: |
           git config --global user.email "akankshalede@gmail.com"
           git config --global user.name "AkankshaLede"
-          git diff --quiet || (git add . && git commit -m "Auto-corrected Python files" && sleep 10 && git push)
-
           git diff --quiet || (git add . && git commit -m "Auto-corrected Python files" && sleep 10 && git push)
