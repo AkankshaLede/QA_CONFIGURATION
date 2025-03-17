@@ -62,7 +62,6 @@
 #         run: |
 #           echo "Mismatch detected — failing the PR."
 #           exit 1
-
 name: Code Correction
 
 on:
@@ -100,8 +99,7 @@ jobs:
       - name: Run comparison script
         id: run_script
         run: |
-          cd utils
-          output=$(python check_cfg_params.py --input_files "../cfgfiles/file1.cfg,../cfgfiles/file2.cfg" --default_file "../test_data/expected.cfg")
+          output=$(python utils/check_cfg_params.py --input_files "cfgfiles/file1.cfg,cfgfiles/file2.cfg" --default_file "test_data/expected.cfg")
           echo "$output"
           
           # Capture the 'Overall Execution flag' value
@@ -118,4 +116,6 @@ jobs:
         run: |
           git config --global user.email "akankshalede@gmail.com"
           git config --global user.name "AkankshaLede"
+          git diff --quiet || (git add . && git commit -m "Auto-corrected Python files" && sleep 10 && git push)
+
           git diff --quiet || (git add . && git commit -m "Auto-corrected Python files" && sleep 10 && git push)
