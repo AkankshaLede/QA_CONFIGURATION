@@ -65,64 +65,125 @@
 
 
 
-name: Code Correction
+# name: Code Correction
+
+# on:
+#   pull_request:
+#     paths:
+#       - 'cfgfiles/**'  #  Trigger only if files in cfgfiles are changed
+#     branches:
+#       - AUTOMATION
+
+# jobs:
+#   format_code:
+#     runs-on: ubuntu-latest
+        
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 2
+#           token: ${{ secrets.GITHUB_TOKEN }}
+
+#       - name: Set up Python 3.10
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.10"
+
+#       - name: Install dependencies
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install openai autopep8 flake8 pylint
+
+#       - name: List files in workspace
+#         run: ls -R
+
+#       - name: Ensure files exist
+#         run: |
+#           if [[ ! -f "cfgfiles/file1.cfg" ]]; then
+#             echo "Error: file1.cfg not found!"
+#             exit 1
+#           fi
+#           if [[ ! -f "cfgfiles/file2.cfg" ]]; then
+#             echo "Error: file2.cfg not found!"
+#             exit 1
+#           fi
+#           if [[ ! -f "test_data/expected.cfg" ]]; then
+#             echo "Error: expected.cfg not found!"
+#             exit 1
+#           fi
+
+#       - name: Run comparison script
+#         id: run_script
+#         run: |
+#           set -x   # Enable debug mode to print each command before running
+#           python utils/check_cfg_params.py --input_files "cfgfiles/file1.cfg,cfgfiles/file2.cfg" --default_file "test_data/expected.cfg"
+#           set +x   # Disable debug mode
+
+#       - name: Commit and push changes (if any)
+#         if: success()
+#         run: |
+#           git config --global user.email "akankshalede@gmail.com"
+#           git config --global user.name "AkankshaLede"
+#           git diff --quiet || (git add . && git commit -m "Auto-corrected Python files" && sleep 10 && git push)
+
+
+
+name: PR Check with Dynamic Arguments
 
 on:
+  workflow_dispatch: # Add this for manual trigger
   pull_request:
     paths:
-      - 'cfgfiles/**'  #  Trigger only if files in cfgfiles are changed
+      - 'cfgfiles/**' # Trigger only if files in cfgfiles are changed
     branches:
       - AUTOMATION
+    types: [opened, synchronize, reopened]
 
 jobs:
-  format_code:
+  run-python-script:
     runs-on: ubuntu-latest
-        
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 2 # Ensure commit history is available
 
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install openai autopep8 flake8 pylint
-
-      - name: List files in workspace
-        run: ls -R
-
-      - name: Ensure files exist
-        run: |
-          if [[ ! -f "cfgfiles/file1.cfg" ]]; then
-            echo "Error: file1.cfg not found!"
-            exit 1
-          fi
-          if [[ ! -f "cfgfiles/file2.cfg" ]]; then
-            echo "Error: file2.cfg not found!"
-            exit 1
-          fi
-          if [[ ! -f "test_data/expected.cfg" ]]; then
-            echo "Error: expected.cfg not found!"
-            exit 1
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "No requirements.txt found, skipping dependency installation."
           fi
 
-      - name: Run comparison script
-        id: run_script
+      # Dynamically identify config files and default file
+      - name: Find Config Files
+        id: find-configs
         run: |
-          set -x   # Enable debug mode to print each command before running
-          python utils/check_cfg_params.py --input_files "cfgfiles/file1.cfg,cfgfiles/file2.cfg" --default_file "test_data/expected.cfg"
-          set +x   # Disable debug mode
+          # Get list of changed files in PR under cfgfiles/ folder
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep '^cfgfiles/.*\.cfg$' || true)
 
-      - name: Commit and push changes (if any)
-        if: success()
+          # Separate default file and input files
+          DEFAULT_FILE=$(echo "$CHANGED_FILES" | grep 'default\.cfg' || true)
+          INPUT_FILES=$(echo "$CHANGED_FILES" | grep -v 'default\.cfg' || true)
+
+          echo "Changed Files: $CHANGED_FILES"
+          echo "Default File: $DEFAULT_FILE"
+          echo "Input Files: $INPUT_FILES"
+
+          # Set outputs for later steps
+          echo "default_file=$DEFAULT_FILE" >> $GITHUB_ENV
+          echo "input_files=$INPUT_FILES" >> $GITHUB_ENV
+
+      # Example of using identified files in next steps
+      - name: Use Found Config Files
         run: |
-          git config --global user.email "akankshalede@gmail.com"
-          git config --global user.name "AkankshaLede"
-          git diff --quiet || (git add . && git commit -m "Auto-corrected Python files" && sleep 10 && git push)
+          echo "Using Default File: $default_file"
+          echo "Using Input Files: $input_files"
