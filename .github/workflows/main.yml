@@ -3,7 +3,7 @@ name: PR Check with Dynamic Arguments
 on:
   pull_request:
     paths:
-      - 'cfgfiles/**'
+      - 'config/**'
     branches:
       - AUTOMATION
     types: [opened, synchronize, reopened]
@@ -49,23 +49,15 @@ jobs:
       - name: Find Config Files
         id: find-configs
         run: |
-          CHANGED_FILES=$(git diff --name-only HEAD^1 HEAD | grep '^cfgfiles/.*\.cfg$' || true)
+          CHANGED_FILES=$(git diff --name-only HEAD^1 HEAD | grep '^config/.*\.cfg$' || true)
+          INPUT_FILES=$(echo "$CHANGED_FILES" | tr '\n' ',')  # Convert newline-separated files to CSV
 
-          DEFAULT_FILE=$(echo "$CHANGED_FILES" | grep 'default\.cfg' || true)
-          INPUT_FILES=$(echo "$CHANGED_FILES" | grep -v 'default\.cfg' || true)
+          echo "Changed Config Files: $INPUT_FILES"
 
-          echo "Changed Files: $CHANGED_FILES"
-          echo "Default File: $DEFAULT_FILE"
-          echo "Input Files: $INPUT_FILES"
-
-          echo "default_file=$DEFAULT_FILE" >> $GITHUB_ENV
-          echo "input_files<<EOF" >> $GITHUB_ENV
-          echo "$INPUT_FILES" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          echo "input_files=$INPUT_FILES" >> $GITHUB_ENV
+          echo "default_file=test_data/expected.cfg" >> $GITHUB_ENV
 
       - name: Run comparison script
         id: run_script
         run: |
-          set -x   # Enable debug mode to print each command before running
-          python utils/check_cfg_params.py --input_files "${{ env.input_files }}" --default_file "${{ env.default_file }}"
-          set +x   # Disable debug mode
+          python3 utils/validate_cfg.py --input_files "${{ env.input_files }}" --default_file "${{ env.default_file }}"
