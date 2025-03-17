@@ -65,7 +65,9 @@
 name: Code Correction
 
 on:
-  push:
+  pull_request:
+    paths:
+      - 'cfgfiles/**'  #  Trigger only if files in cfgfiles are changed
     branches:
       - AUTOMATION
 
