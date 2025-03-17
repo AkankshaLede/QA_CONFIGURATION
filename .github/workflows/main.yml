@@ -1,10 +1,9 @@
 name: PR Check with Dynamic Arguments
 
 on:
-  workflow_dispatch: # Add this for manual trigger
   pull_request:
     paths:
-      - 'cfgfiles/**' # Trigger only if files in cfgfiles are changed
+      - 'cfgfiles/**'
     branches:
       - AUTOMATION
     types: [opened, synchronize, reopened]
@@ -17,15 +16,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2 # Ensure commit history is available
+          fetch-depth: 2
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      - name : List files in workspace
-        uses : ls -R 
+      - name: List files in workspace
+        run: ls -R
 
       - name: Install Dependencies
         run: |
@@ -35,14 +34,11 @@ jobs:
             echo "No requirements.txt found, skipping dependency installation."
           fi
 
-      # Dynamically identify config files and default file
       - name: Find Config Files
         id: find-configs
         run: |
-          # Get list of changed files in PR under cfgfiles/ folder
           CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep '^cfgfiles/.*\.cfg$' || true)
 
-          # Separate default file and input files
           DEFAULT_FILE=$(echo "$CHANGED_FILES" | grep 'default\.cfg' || true)
           INPUT_FILES=$(echo "$CHANGED_FILES" | grep -v 'default\.cfg' || true)
 
@@ -50,11 +46,9 @@ jobs:
           echo "Default File: $DEFAULT_FILE"
           echo "Input Files: $INPUT_FILES"
 
-          # Set outputs for later steps
           echo "default_file=$DEFAULT_FILE" >> $GITHUB_ENV
           echo "input_files=$INPUT_FILES" >> $GITHUB_ENV
 
-      # Example of using identified files in next steps
       - name: Use Found Config Files
         run: |
           echo "Using Default File: $default_file"
