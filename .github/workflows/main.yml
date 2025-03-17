@@ -68,10 +68,12 @@ name: PR Check - Validate Config Files
 on:
   pull_request:
     paths:
-      - 'cfgfiles/**'  # Trigger only if files in cfgfiles are changed
+      - 'cfgfiles/**'  # Updated path to match repo structure
     branches:
-      - AUTOMATION  # Trigger only in the AUTOMATION branch
+      - AUTOMATION
     types: [opened, synchronize, reopened]
+  
+  workflow_dispatch:  # ✅ Allows manual triggering from GitHub UI
 
 jobs:
   validate-configs:
@@ -80,7 +82,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensure full commit history
+          fetch-depth: 0  # Ensure full commit history for git diff
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -95,22 +97,32 @@ jobs:
             echo "No requirements.txt found, skipping dependency installation."
           fi
 
+      - name: Debug GitHub Context
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Changed files:"
+          git diff --name-only HEAD^ HEAD
+
       - name: Find Changed Config Files
         id: find-configs
         run: |
-          # Show branch name
-          echo "Current branch: $(git branch --show-current)"
-          
-          # Get changed files only in PR
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD | grep '^cfgfiles/.*\.cfg$' || true)
+          # Debug: Print changed files
+          echo "Changed files from git diff:"
+          git diff --name-only origin/AUTOMATION...HEAD
 
+          # Get changed .cfg files in the cfgfiles/ directory
+          CHANGED_FILES=$(git diff --name-only origin/AUTOMATION...HEAD | grep '^cfgfiles/.*\.cfg$' || true)
+
+          # Identify the expected/default file and input files
           DEFAULT_FILE=$(echo "$CHANGED_FILES" | grep -E "(default|expected)\.cfg" || echo "")
-          INPUT_FILES=$(echo "$CHANGED_FILES" | grep -v "$DEFAULT_FILE" | tr '\n' ' ')
+          INPUT_FILES=$(echo "$CHANGED_FILES" | grep -v "$DEFAULT_FILE" | tr '\n' ',')
 
           echo "Changed .cfg files: $CHANGED_FILES"
           echo "Default file: $DEFAULT_FILE"
           echo "Input files: $INPUT_FILES"
 
+          # Set environment variables
           echo "INPUT_FILES=$INPUT_FILES" >> $GITHUB_ENV
           echo "DEFAULT_FILE=$DEFAULT_FILE" >> $GITHUB_ENV
 
