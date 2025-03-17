@@ -18,6 +18,11 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Debug Info
+        run: |
+          echo "Current Branch: $(git branch --show-current)"
+          git diff --name-only HEAD^1 HEAD
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -37,7 +42,7 @@ jobs:
       - name: Find Config Files
         id: find-configs
         run: |
-          CHANGED_FILES=$(git diff --name-only FETCH_HEAD...HEAD | grep '^cfgfiles/.*\.cfg$' || true)
+          CHANGED_FILES=$(git diff --name-only HEAD^1 HEAD | grep '^cfgfiles/.*\.cfg$' || true)
 
           DEFAULT_FILE=$(echo "$CHANGED_FILES" | grep 'default\.cfg' || true)
           INPUT_FILES=$(echo "$CHANGED_FILES" | grep -v 'default\.cfg' || true)
@@ -51,7 +56,9 @@ jobs:
           echo "$INPUT_FILES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-      - name: Use Found Config Files
+      - name: Run comparison script
+        id: run_script
         run: |
-          echo "Using Default File: ${{ env.default_file }}"
-          echo "Using Input Files: ${{ env.input_files }}"
+          set -x   # Enable debug mode to print each command before running
+          python utils/check_cfg_params.py --input_files "${{ env.input_files }}" --default_file "${{ env.default_file }}"
+          set +x   # Disable debug mode
