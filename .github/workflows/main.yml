@@ -58,9 +58,9 @@ name: PR Check with Dynamic Arguments
 on:
   pull_request:
     paths:
-      - 'config/**'  # Make sure this matches your folder structure
+      - 'cfgfiles/**'  # Adjust folder if needed
     branches:
-      - AUTOMATION
+      - test-actions  # 🔹 Ensure this matches your branch name
     types: [opened, synchronize, reopened]
 
 permissions:
@@ -74,6 +74,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}  # Ensures correct branch is checked out
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -83,6 +85,9 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install -r requirements.txt || echo "No dependencies to install."
+
+      - name: Debug Changed Files
+        run: git diff --name-only HEAD^1 HEAD
 
       - name: Find Config Files
         id: find-configs
