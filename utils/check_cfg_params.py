@@ -1,101 +1,96 @@
 import configparser
 import argparse
+import logging
+
+def read_range(value) -> tuple:
+    try:
+        range_str = value.replace("RANGE", "").replace("range", "").strip("[]")
+        start, end = map(int, range_str.split(","))
+        return start, end
+    except Exception as e:
+        print(f"Invalid range format: '{value}', error: {e}")
+        return None
+
 
 def read_cfg_to_dict(file_path):
     config = configparser.ConfigParser()
-    config.optionxform = str  # Preserve case sensitivity
-    try:
-        config.read(file_path)
-    except Exception as e:
-        raise ValueError(f"Error reading file {file_path}: {e}")
-
+    config.read(file_path)
     return {section: dict(config.items(section)) for section in config.sections()}
 
-def validate_config(actual_cfg, expected_cfg, file_path):
-    mismatches = []
+
+def validate_config(actual_dict, expected_dict, cfg_file_path):
+    output = set()
     flag = 0
+    filename = cfg_file_path.split('/')[-1]
+    for section, parameters in expected_dict.items():
+        for key, value in parameters.items():
+            if value.upper() == "MUST_EXIST":
+                if section not in actual_dict:
+                    output.add(f"MUST: [{section}] section should be present in {filename}")
+                    flag = 1
+                    continue
 
-    # Compare expected vs actual values
-    for section, expected_params in expected_cfg.items():
-        if section in actual_cfg:
-            for key, expected_value in expected_params.items():
-                actual_value = actual_cfg[section].get(key)
+                if key not in actual_dict[section]:
+                    output.add(f"MUST: '{key}' should be present in section [{section}] in {filename}")
+                    flag = 1
 
-                # Case 1: SHOULD_NOT_BE_PRESENT — key should not exist
-                if expected_value == "SHOULD_NOT_BE_PRESENT":
-                    if actual_value is not None:
-                        mismatches.append(
-                            f"Error: '{key}' should not be present in section [{section}] in {file_path}"
-                        )
+            elif value.upper() == "SHOULD_NOT_BE_PRESENT":
+                if section in actual_dict:
+                    if key in actual_dict[section]:
+                        output.add(f"NOT_BE: '{key}' should NOT be in section [{section}] in {filename}")
                         flag = 1
 
-                # Case 2: MUST_EXIST - key must exist with any value.
-                elif expected_value == "MUST_EXIST":
-                    if actual_value is None:
-                        mismatches.append(
-                            f"Error: '{key}' must exist in section [{section}] in {file_path}"
-                        )
-                        flag = 1
+            elif value.upper().startswith("RANGE"):
+                if section in actual_dict:
+                    if key in actual_dict[section]:
+                        my_range = read_range(value)
+                        try:
+                            actual_val = int(actual_dict[section][key])
+                            if my_range and actual_val not in range(my_range[0], my_range[1] + 1):
+                                output.add(f"COUNT: Value of '{key}' in [{section}] of {filename} not in range {my_range}")
+                                flag = 1
+                        except ValueError:
+                            output.add(f"ERROR: Value of '{key}' in [{section}] of {filename} is not an integer")
+                            flag = 1
 
-                # Case 3: Expected value is present but wrong
-                else:
-                    if actual_value is None:
-                        mismatches.append(
-                            f"Error: '{key}' is missing in section [{section}] in {file_path}"
-                        )
-                        flag = 1
-                    elif actual_value != expected_value:
-                        mismatches.append(
-                            f"'{key}' in section [{section}] is '{actual_value}', expected '{expected_value}'"
-                        )
-                        flag = 1
-        else:
-            # Case 4: Missing section entirely (if keys are not marked as SHOULD_NOT_BE_PRESENT or MUST_EXIST)
-            if not all(value in ("SHOULD_NOT_BE_PRESENT", "MUST_EXIST") for value in expected_params.values()):
-                mismatches.append(
-                    f"Error: Section [{section}] is missing in {file_path}"
-                )
-                flag = 1
             else:
-                #case 5: if section is missing but a parameter is marked as MUST_EXIST, then throw error.
-                for key, expected_value in expected_params.items():
-                    if expected_value == "MUST_EXIST":
-                      mismatches.append(f"Error: Section [{section}] is missing, '{key}' from [{section}] must exist in {file_path}")
-                      flag = 1
+                if section in actual_dict:
+                    if key in actual_dict[section]:
+                        if actual_dict[section][key] != value:
+                            output.add(f"MISSMATCH: Value '{key}' in section [{section}] is '{actual_dict[section][key]}' in '{filename}' expected '{value}'")
+                            flag = 1
+                        continue
 
-    return mismatches, flag
+    return output, flag
 
-def main():
-    parser = argparse.ArgumentParser(description="Compare multiple .cfg files with a single expected .cfg file")
-    parser.add_argument('--input_files', type=str, required=True,
-                        help="Comma-separated list of input .cfg files to validate")
-    parser.add_argument('--default_file', type=str, required=True,
-                        help="Path to the expected .cfg file")
 
-    args = parser.parse_args()
-
-    input_files = args.input_files.split(",")
-    expected_file = args.default_file
-
-    # Read expected config
-    expected_config = read_cfg_to_dict(expected_file)
-
-    overall_flag = 0
-    for file in input_files:
-        actual_config = read_cfg_to_dict(file)
-
-        mismatch_list, flag = validate_config(actual_config, expected_config, file)
-
-        if mismatch_list:
-            print(f"\n Mismatches in '{file}':")
-            print("\n".join(mismatch_list))
-        else:
-            print(f" All parameters in '{file}' match the expected configuration.")
-
-        overall_flag = max(overall_flag, flag)
-
-    print("\n Overall Execution flag:", overall_flag)
-    return overall_flag
 
 if __name__ == "__main__":
-    exit(main())
+    logger = logging.getLogger("validate")
+    logger.setLevel(logging.DEBUG)
+    if not logger.handlers:
+        console_handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(levelname)s:%(name)s: %(message)s')
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
+    parser = argparse.ArgumentParser(description="Validate configuration files")
+    parser.add_argument("--input_files", required=True, help="Comma-separated list of input config files")
+    parser.add_argument("--default_file", required=True, help="Path to expected configuration file")
+
+    args = parser.parse_args()
+    actual_files = args.input_files.split(",")
+    expected_config = read_cfg_to_dict(args.default_file)
+    overall_flag = 0
+    for file in actual_files:
+        actual_config = read_cfg_to_dict(file)
+        errors, flag = validate_config(actual_dict=actual_config,
+                                              expected_dict=expected_config,
+                                              cfg_file_path=file)
+        if errors and flag == 1:
+            for er in errors:
+                logger.error(er)
+        else:
+            logger.info(f"All parameters in '{file}' match the expected configuration.")
+    overall_flag = max(overall_flag, flag)
+    logger.info(f"Overall Execution flag: {overall_flag}")

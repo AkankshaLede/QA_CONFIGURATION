@@ -1,0 +1,16 @@
+INFO: Reading expected config from: test_data/expected.cfg
+INFO: 
+Checking configuration file: cfgfiles/file1.cfg
+WARNING: Mismatches found in 'cfgfiles/file1.cfg':
+ERROR: Error: 'image_compression' should not be present in section [settings] in cfgfiles/file1.cfg
+ERROR: Error: 'calibration_count' in section [dataset] is '10', expected range RANGE[1,5]
+ERROR: 'validation_count' in section [dataset] is '1', expected '2'
+ERROR: Error: Section [network] is missing, 'input_model' from [network] must exist in cfgfiles/file1.cfg
+INFO: 
+Checking configuration file: cfgfiles/file2.cfg
+WARNING: Mismatches found in 'cfgfiles/file2.cfg':
+ERROR: Error: Section [System] is missing in cfgfiles/file2.cfg
+ERROR: Error: Section [settings] is missing in cfgfiles/file2.cfg
+ERROR: Error: Section [dataset] is missing in cfgfiles/file2.cfg
+INFO: 
+Overall Execution flag: 1
