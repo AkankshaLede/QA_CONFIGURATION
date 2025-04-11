@@ -63,8 +63,6 @@ def validate_config(actual_dict, expected_dict, cfg_file_path):
 
     return output, flag
 
-
-
 if __name__ == "__main__":
     logger = logging.getLogger("validate")
     logger.setLevel(logging.DEBUG)
@@ -90,7 +88,9 @@ if __name__ == "__main__":
         if errors and flag == 1:
             for er in errors:
                 logger.error(er)
+            overall_flag = 1
+
         else:
             logger.info(f"All parameters in '{file}' match the expected configuration.")
     overall_flag = max(overall_flag, flag)
-    logger.info(f"Overall Execution flag: {overall_flag}")
+logger.info(f"Overall Execution flag: {overall_flag}")
