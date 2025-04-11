@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
 if overall_flag == 1:
     logger.error(f"Execution failes.Overall Execution flag: {overall_flag}")
-    sys.exist(1)
+    sys.exit(1)
 else:
     logger.info(f"Execution successful. Overall Execution flag: {overall_flag}")
     sys.exit(0)
