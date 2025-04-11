@@ -35,7 +35,7 @@ jobs:
       - name: Run comparison script
         id: run_script
         run: |
-          cd utils  # Move into utils directory
+          # cd utils  # Move into utils directory
           output=$(python utils/check_cfg_params.py input_files cfgfiles/file1.cfg,cfgfiles/file2.cfg --default_file cfgfiles/expected.cfg)
           echo "$output"
           
