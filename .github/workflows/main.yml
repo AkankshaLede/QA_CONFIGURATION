@@ -36,7 +36,7 @@ jobs:
         id: run_script
         run: |
           # cd utils  # Move into utils directory
-          output=$(python utils/check_cfg_params.py input_files cfgfiles/file1.cfg,cfgfiles/file2.cfg --default_file cfgfiles/expected.cfg)
+          output=$(python utils/check_cfg_params.py --input_files cfgfiles/file1.cfg,cfgfiles/file2.cfg --default_file cfgfiles/expected.cfg)
           echo "$output"
           
           # Capture the 'Overall Execution flag' value
