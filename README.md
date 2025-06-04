@@ -32,18 +32,18 @@ validation_count = 2
 network_detail = MUST_EXIST
 ```
 
-**MUST_EXIST : **
+## MUST_EXIST : 
 This rule dictates that a specific key must be present within its designated section in the configuration file
 1. This means that the key must exist in the configuration file.
 2. It should not be empty or missing.
 3. If the key is not found, the check will fail.
 
 
-**SHOULD_NOT_BE_PRESENT : **
+## SHOULD_NOT_BE_PRESENT : 
 This rule specifies that a particular key must not be present in the configuration file at all.
 1. If the key exists, even with an empty value, the check will fail.
 
-**RANGE[min,max] : **
+## RANGE[min,max] : 
 This rule is designed for numeric values and ensures that a parameter's value falls within a specified inclusive range.
 1. It checks whether the value lies within the specified range.
 2. If the value is below or above the range, the check will fail.
