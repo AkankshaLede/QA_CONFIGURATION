@@ -1,6 +1,7 @@
 import configparser
 import argparse
 import logging
+import sys
 
 def read_range(value) -> tuple:
     try:
@@ -93,4 +94,10 @@ if __name__ == "__main__":
         else:
             logger.info(f"All parameters in '{file}' match the expected configuration.")
     overall_flag = max(overall_flag, flag)
-logger.info(f"Overall Execution flag: {overall_flag}")
+if overall_flag == 1:
+    logger.error("Validation failed. Overall Execution flag: 1")
+    sys.exit(1)
+else:
+    logger.info("Validation successful. Overall Execution flag: 0")
+    sys.exit(0)
+
